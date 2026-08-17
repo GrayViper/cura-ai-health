@@ -1,0 +1,12 @@
+{
+  "name": "cura-ai-health",
+  "version": "1.0.0",
+  "description": "Cura AI Health - Clinical Diagnostic & Report Analysis Platform",
+  "main": "index.html",
+  "scripts": {
+    "dev": "npx http-server -p 3000"
+  },
+  "keywords": [],
+  "author": "Cura AI",
+  "license": "ISC"
+}

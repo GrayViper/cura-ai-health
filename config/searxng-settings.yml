@@ -1,0 +1,131 @@
+# searXNG Settings Configuration
+# Full documentation: https://docs.searxng.org/admin/settings/index.html
+
+server:
+  # Host to bind to
+  host: 0.0.0.0
+  port: 8080
+  
+  # Base URL for searXNG
+  base_url: http://localhost:8888/
+  
+  # Secret key for secure sessions
+  secret_key: "cura-ai-health-searxng-secret-key"
+  
+  # Request timeout
+  request_timeout: 5.0
+  
+  # Connection pool settings
+  connection_pool_connections: 100
+  connection_pool_maxsize: 100
+
+# UI Configuration
+ui:
+  # Static path
+  static_path: /usr/local/searxng/searx/static
+  
+  # Templates path
+  templates_path: /usr/local/searxng/searx/templates
+  
+  # Theme
+  theme: simple
+  
+  # Results on page
+  results_on_page: 20
+  
+  # Default language
+  default_lang: en
+  
+  # Image proxy
+  image_proxy: true
+
+# Logging configuration
+logging:
+  level: INFO
+  
+  # Log format
+  format: "[%(asctime)s] [%(name)s] [%(levelname)s] %(message)s"
+
+# Search settings
+search:
+  # Autocomplete backends
+  autocomplete: bing
+  
+  # Enable autocomplete
+  autocomplete_min: 3
+  
+  # Autocomplete timeout
+  autocomplete_timeout: 2
+
+# Enabled engines for medical research
+# Disable social media and focus on academic/medical sources
+engines:
+  - name: google
+    enabled: true
+    shortcut: g
+    
+  - name: bing
+    enabled: true
+    shortcut: b
+    
+  - name: wikipedia
+    enabled: true
+    shortcut: w
+    
+  - name: pubmed
+    enabled: true
+    shortcut: pm
+    
+  - name: arxiv
+    enabled: true
+    shortcut: ax
+    
+  - name: duckduckgo
+    enabled: true
+    shortcut: ddg
+    
+  - name: google scholar
+    enabled: true
+    shortcut: scholar
+
+# Result proxy settings
+result_proxy:
+  # URL to proxy results through
+  url: null
+  
+  # Enable CORS
+  cors: false
+  
+  # Allow list for proxying
+  allow_list: []
+
+# Tor settings (optional)
+outgoing:
+  # Enable proxy
+  using_tor_proxy: false
+  
+  # Tor proxy URL
+  # proxy: socks5h://127.0.0.1:9050
+
+# Rate limiting
+rate_limit:
+  # Enable rate limiting
+  enabled: false
+  
+  # Requests per second
+  rate_per_second: 10
+
+# Security headers
+http_protocol_version: "1.1"
+
+# Request headers
+request_headers:
+  User-Agent: "Cura AI Health / searXNG"
+
+# Cache settings
+cache:
+  # Cache type (memory, redis, etc)
+  cache: memory
+  
+  # Cache expire time (seconds)
+  expire_time: 3600

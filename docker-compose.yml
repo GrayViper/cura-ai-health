@@ -1,0 +1,142 @@
+version: '3.8'
+
+services:
+  # OCR Microservice - Extract text from medical images/PDFs
+  ocr-service:
+    build: ./services/ocr
+    container_name: cura-ocr-service
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_ENV=production
+      - WORKERS=4
+    volumes:
+      - ocr-temp:/tmp/ocr
+    networks:
+      - cura-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  # Orthanc DICOM Server - Store and manage medical imaging
+  orthanc:
+    image: jodogne/orthanc:latest
+    container_name: cura-orthanc
+    ports:
+      - "8042:8042"  # Web UI
+      - "4242:4242"  # DICOM
+    environment:
+      ORTHANC_PASSWORD: ${ORTHANC_PASSWORD:-orthanc123}
+      ORTHANC_DICOM_PORT: 4242
+      ORTHANC_HTTP_PORT: 8042
+    volumes:
+      - ./config/orthanc.json:/etc/orthanc/orthanc.json:ro
+      - orthanc-storage:/var/lib/orthanc/db
+    networks:
+      - cura-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8042/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  # HAPI FHIR Server - Clinical data standards
+  hapi-fhir:
+    image: hapiproject/hapi:latest
+    container_name: cura-hapi-fhir
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/hapi_fhir
+      SPRING_DATASOURCE_USERNAME: ${DB_USER:-hapi_user}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:-hapi_pass123}
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+    depends_on:
+      mysql:
+        condition: service_healthy
+    volumes:
+      - hapi-storage:/data/hapi
+    networks:
+      - cura-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/fhir/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  # MySQL Database - Backend for HAPI FHIR
+  mysql:
+    image: mysql:8.0
+    container_name: cura-mysql
+    environment:
+      MYSQL_DATABASE: hapi_fhir
+      MYSQL_USER: ${DB_USER:-hapi_user}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-hapi_pass123}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root_pass123}
+    volumes:
+      - mysql-storage:/var/lib/mysql
+      - ./config/mysql-init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - cura-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # searXNG - Privacy-focused metasearch for medical literature
+  searxng:
+    image: searxng/searxng:latest
+    container_name: cura-searxng
+    ports:
+      - "8888:8080"
+    environment:
+      - SEARXNG_BASE_URL=http://localhost:8888
+    volumes:
+      - ./config/searxng-settings.yml:/etc/searxng/settings.yml:ro
+      - searxng-cache:/var/cache/searxng
+    networks:
+      - cura-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  # Nginx Reverse Proxy - Route requests and TLS termination
+  nginx:
+    image: nginx:alpine
+    container_name: cura-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./config/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./config/ssl:/etc/nginx/ssl:ro
+      - ./:/usr/share/nginx/html:ro
+    networks:
+      - cura-network
+    depends_on:
+      - ocr-service
+      - orthanc
+      - hapi-fhir
+      - searxng
+    restart: unless-stopped
+
+volumes:
+  ocr-temp:
+  orthanc-storage:
+  hapi-storage:
+  mysql-storage:
+  searxng-cache:
+
+networks:
+  cura-network:
+    driver: bridge

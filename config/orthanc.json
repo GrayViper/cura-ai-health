@@ -1,0 +1,58 @@
+{
+  /**
+   * Orthanc Configuration for Cura AI Health
+   * Full documentation: https://book.orthanc-server.com/
+   */
+  
+  "HttpPort": 8042,
+  "DicomPort": 4242,
+  "HttpServerEnabled": true,
+  "DicomServerEnabled": true,
+
+  // Storage directory for DICOM files
+  "StorageDirectory": "/var/lib/orthanc/db",
+
+  // Authentication
+  "AuthenticationEnabled": true,
+  "RegisteredUsers": {
+    "orthanc": "orthanc123"
+  },
+
+  // Logging
+  "LogLevel": 2,  // 0=ERROR, 1=WARNING, 2=INFO, 3=DEBUG
+
+  // DICOM modalities
+  "DicomModalities": {},
+
+  // Peer Orthanc instances
+  "OrthancPeers": {},
+
+  // Enable CORS for web app
+  "CorsOrigins": ["*"],
+
+  // Enable REST API
+  "RestApi": {
+    "Enabled": true
+  },
+
+  // Storage compression
+  "StorageCompression": true,
+
+  // Maximum storage size (10GB)
+  "MaximumStorageSize": 10737418240,
+
+  // Job scheduling
+  "JobsHistorySize": 10,
+
+  // DICOM conformance
+  "DicomConformance": {
+    "AcceptPartialTransfers": true,
+    "AllowFindWorklist": true
+  },
+
+  // Web application settings
+  "WebUI": {
+    "Enabled": true,
+    "PublicUrl": "http://localhost:8042"
+  }
+}

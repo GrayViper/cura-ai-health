@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cura AI - Clinical Diagnostic & Report Analysis Platform</title>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- PDF.js CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+  <!-- Tesseract.js CDN -->
+  <script src="https://unpkg.com/tesseract.js@5.1.0/dist/tesseract.min.js"></script>
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- html2pdf.js CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.12.1/html2pdf.bundle.min.js"></script>
+  <!-- Cura Services Integration Module -->
+  <script src="services-integration.js"></script>
+  <!-- Stylesheets -->
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- Medical Disclaimer Banner -->
+  <div class="disclaimer-banner" id="disclaimerBanner">
+    <div class="disclaimer-content">
+      <i data-lucide="alert-triangle" class="disclaimer-icon"></i>
+      <p><strong>Disclaimer:</strong> Cura AI is an AI-driven educational tool designed to help you understand your medical reports. It does not provide professional medical advice, diagnosis, or treatment. Always consult with a qualified physician regarding any medical conditions.</p>
+    </div>
+    <button class="close-disclaimer-btn" id="closeDisclaimerBtn" aria-label="Close disclaimer">
+      <i data-lucide="x"></i>
+    </button>
+  </div>
+
+  <!-- App Header -->
+  <header class="app-header">
+    <div class="header-logo">
+      <div class="logo-icon-wrapper">
+        <i data-lucide="activity" class="logo-icon"></i>
+      </div>
+      <div class="logo-text">
+        <h1>Cura <span>AI</span></h1>
+        <span class="sub-logo">Clinical Intelligence Hub</span>
+      </div>
+    </div>
+    
+    <div class="header-status">
+      <div class="status-indicator online"></div>
+      <span>Diagnostic Engine v1.4: Online</span>
+    </div>
+
+    <div class="header-actions">
+      <button class="btn btn-secondary" id="historyToggleBtn">
+        <i data-lucide="history"></i>
+        <span>Report History</span>
+      </button>
+      <button class="btn btn-primary" id="newReportBtn">
+        <i data-lucide="upload-cloud"></i>
+        <span>Analyze Report</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Workspace Grid -->
+  <main class="app-workspace">
+    
+    <!-- Sidebar Panel: History & Uploads -->
+    <aside class="sidebar-panel" id="sidebarPanel">
+      <div class="sidebar-card upload-section">
+        <h3>Analyze New Report</h3>
+        <p class="section-desc">Upload clinical PDF, image, or raw text to extract biomarkers and analyze health indices.</p>
+        
+        <!-- Drag and Drop Area -->
+        <div class="drag-drop-zone" id="dropZone">
+          <input type="file" id="fileInput" class="file-input" accept=".pdf,image/png,image/jpeg,image/jpg" />
+          <div class="upload-graphics">
+            <div class="pulse-ring">
+              <i data-lucide="file-text" class="upload-icon"></i>
+            </div>
+            <p class="upload-prompt">Drag & drop medical files here</p>
+            <span class="upload-subtext">Supports PDF, PNG, JPG (Max 15MB)</span>
+            <button class="btn btn-outline btn-sm" id="browseBtn">Browse Files</button>
+          </div>
+        </div>
+
+        <div class="text-paste-toggle-wrapper">
+          <button class="text-toggle-btn" id="pasteToggleBtn">
+            <i data-lucide="align-left"></i>
+            <span>Or paste raw report text</span>
+          </button>
+        </div>
+
+        <!-- Raw Text Input (Collapsible) -->
+        <div class="text-paste-area hidden" id="pasteAreaContainer">
+          <textarea id="rawTextPaste" placeholder="Paste your lab report text here... (e.g., Hemoglobin 12.5 g/dL, Cholesterol 210 mg/dL)"></textarea>
+          <button class="btn btn-primary btn-sm w-full" id="analyzePasteBtn">Analyze Text</button>
+        </div>
+
+        <div class="text-paste-toggle-wrapper" style="margin-top: 12px; border-top: 1px solid var(--border-color); padding-top: 12px;">
+          <button class="text-toggle-btn" id="manualEntryToggleBtn">
+            <i data-lucide="edit-3"></i>
+            <span>Or enter biomarkers manually</span>
+          </button>
+        </div>
+
+        <!-- Manual Entry Form (Collapsible) -->
+        <div class="manual-entry-area hidden" id="manualEntryContainer" style="margin-top: 12px; border-top: 1px solid var(--border-color); padding-top: 12px;">
+          <div class="form-group" style="margin-bottom: 12px;">
+            <label for="manualCategorySelect" style="display:block; font-size:0.75rem; color:var(--text-secondary); margin-bottom:4px; font-weight:600;">Report Category</label>
+            <select id="manualCategorySelect" class="trend-select w-full" style="padding: 8px; background: rgba(0,0,0,0.3); border: 1px solid var(--border-color); border-radius: 6px; color: white;">
+              <option value="lipid">Lipid Panel</option>
+              <option value="cbc">Complete Blood Count (CBC)</option>
+              <option value="thyroid">Thyroid Profile</option>
+              <option value="diabetes">Diabetes Screen</option>
+            </select>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 12px;">
+            <label for="manualReportTitle" style="display:block; font-size:0.75rem; color:var(--text-secondary); margin-bottom:4px; font-weight:600;">Report Title</label>
+            <input type="text" id="manualReportTitle" style="width:100%; padding:8px; border-radius:6px; border:1px solid var(--border-color); background:rgba(0,0,0,0.3); color:white; font-size:0.8rem; outline:none;" value="Custom Lipid Profile" />
+          </div>
+
+          <!-- Dynamic Biomarkers Grid -->
+          <div id="manualFieldsContainer" class="manual-fields-grid" style="margin-bottom: 12px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+            <!-- Generated dynamically in app.js -->
+          </div>
+
+          <button class="btn btn-primary btn-sm w-full" id="saveManualReportBtn">Save Report</button>
+        </div>
+      </div>
+
+      <!-- Quick Demo Panels -->
+      <div class="sidebar-card demo-section">
+        <h3>Explore Sample Reports</h3>
+        <p class="section-desc">Instantly load comprehensive sample panels to see the interactive AI dashboard in action.</p>
+        <div class="demo-buttons-grid">
+          <button class="demo-btn" data-report-type="cbc">
+            <span class="demo-icon cbc"><i data-lucide="droplet"></i></span>
+            <span class="demo-title">Blood Count (CBC)</span>
+            <span class="demo-desc">Anemia, RBC, WBC, Platelets</span>
+          </button>
+          <button class="demo-btn" data-report-type="lipid">
+            <span class="demo-icon lipid"><i data-lucide="heart"></i></span>
+            <span class="demo-title">Lipid Panel</span>
+            <span class="demo-desc">Cholesterol, HDL, LDL, TG</span>
+          </button>
+          <button class="demo-btn" data-report-type="thyroid">
+            <span class="demo-icon thyroid"><i data-lucide="shield-alert"></i></span>
+            <span class="demo-title">Thyroid Function</span>
+            <span class="demo-desc">TSH, Free T3, Free T4</span>
+          </button>
+          <button class="demo-btn" data-report-type="diabetes">
+            <span class="demo-icon diabetes"><i data-lucide="trending-up"></i></span>
+            <span class="demo-title">Diabetes Screen</span>
+            <span class="demo-desc">HbA1c, Fasting Glucose</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Report History Records Card -->
+      <div class="sidebar-card history-section" id="historyCard">
+        <div class="card-header-row">
+          <h3>Report History Records</h3>
+          <span class="panel-count-label" id="historyCountLabel">0 Reports</span>
+        </div>
+        <p class="section-desc">Select a past diagnostic record to load in the dashboard.</p>
+        <div class="history-list" id="historyListContainer" style="display: flex; flex-direction: column; gap: 10px; max-height: 200px; overflow-y: auto; padding-right: 4px;">
+          <!-- Populated dynamically in app.js -->
+        </div>
+      </div>
+
+      <!-- Historical Trends Summary -->
+      <div class="sidebar-card trends-section">
+        <div class="card-header-row">
+          <h3>Health Tracking Trends</h3>
+          <select id="trendBiomarkerSelect" class="trend-select">
+            <optgroup label="Lipids (Cardiovascular)">
+              <option value="all_lipids">All Lipids (LDL, HDL, TG, Total)</option>
+              <option value="ldl">LDL Cholesterol</option>
+              <option value="hdl">HDL Cholesterol</option>
+              <option value="chol">Total Cholesterol</option>
+              <option value="tg">Triglycerides</option>
+            </optgroup>
+            <optgroup label="Hematology (CBC)">
+              <option value="all_cbc">All Hematology (Hb, RBC, WBC, Plt)</option>
+              <option value="hb">Hemoglobin</option>
+              <option value="rbc">Red Blood Cells</option>
+              <option value="wbc">White Blood Cells</option>
+              <option value="plt">Platelets</option>
+            </optgroup>
+            <optgroup label="Thyroid Profile">
+              <option value="all_thyroid">All Thyroid (TSH, FT3, FT4)</option>
+              <option value="tsh">TSH</option>
+              <option value="ft3">Free T3</option>
+              <option value="ft4">Free T4</option>
+            </optgroup>
+            <optgroup label="Metabolic & Glycemic">
+              <option value="all_metabolic">All Glycemic (Glucose, HbA1c)</option>
+              <option value="glucose">Fasting Glucose</option>
+              <option value="hba1c">Hemoglobin A1c</option>
+            </optgroup>
+          </select>
+        </div>
+        <div class="trend-chart-container">
+          <canvas id="trendChart" width="300" height="150"></canvas>
+          <div id="chartFallbackMessage" class="chart-fallback">
+            <i data-lucide="line-chart"></i>
+            <p>Upload multiple reports over time to track physiological biomarker trends.</p>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Results Dashboard Container -->
+    <section class="dashboard-container" id="dashboardContainer">
+      
+      <div class="patient-profile-panel patient-page-design" id="patientProfilePanel">
+        <div class="patient-topbar">
+          <div class="topbar-chip">Scan analysis / Brain MRI</div>
+          <div class="topbar-tools">
+            <button class="tool-btn tool-circle" aria-label="Copy"><i data-lucide="copy"></i></button>
+            <button class="tool-btn" aria-label="Compare"><i data-lucide="columns-3"></i></button>
+            <button class="tool-btn share-btn">Share</button>
+          </div>
+        </div>
+
+        <div class="study-header">
+          <h2>Study #MRI-9902-X</h2>
+          <div class="study-actions">
+            <button class="btn btn-primary btn-sm">Analysis Complete</button>
+            <button class="btn btn-secondary btn-sm">Report</button>
+          </div>
+        </div>
+
+        <div class="patient-meta-card">
+          <div class="patient-meta-head">
+            <div class="small-avatar">R</div>
+            <div>
+              <h3>Robert J. Oppenheimer</h3>
+              <p>ID: PT-8834-921</p>
+            </div>
+          </div>
+
+          <div class="meta-grid">
+            <div class="meta-box">
+              <span>DOB</span>
+              <strong>1945-06-22</strong>
+              <small>(78y)</small>
+            </div>
+            <div class="meta-box">
+              <span>Sex</span>
+              <strong>Male</strong>
+            </div>
+            <div class="meta-box">
+              <span>Scan Date</span>
+              <strong>2023-10-27</strong>
+            </div>
+            <div class="meta-box">
+              <span>Modality</span>
+              <strong>MRI (T1/T2)</strong>
+            </div>
+          </div>
+        </div>
+
+        <div class="notes-card">
+          <div class="section-label">Clinical Notes</div>
+          <div class="note-alert">
+            <div class="note-marker">i</div>
+            <div>
+              <strong>Prior Comparison Available</strong>
+              <p>Compare with scan from 2022-05-14 to assess progression.</p>
+            </div>
+          </div>
+          <div class="note-body">
+            Patient presents with mild cognitive impairment. Scan reveals minor age-related cortical atrophy consistent with prior studies. No acute intracranial hemorrhage, mass effect, or midline shift. Ventricles and sulci are prominent, but findings remain stable relative to the prior imaging study.
+          </div>
+        </div>
+
+        <div class="metrics-card">
+          <div class="section-label">AI Confidence Metrics</div>
+          <div class="metric-row">
+            <div class="metric-tile active">Home</div>
+            <div class="metric-tile">Scans</div>
+            <div class="metric-tile">Records</div>
+            <div class="metric-tile">Profile</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Welcome Empty State -->
+      <div class="welcome-empty-state" id="welcomeEmptyState" style="display: none;">
+        <div class="empty-graphic">
+          <div class="scanner-glow"></div>
+          <i data-lucide="activity" class="empty-icon animate-pulse"></i>
+        </div>
+        <h2>Clinical Diagnostic Hub</h2>
+        <p>Upload a PDF lab report, paste raw clinical values, or load a sample report to inspect dynamic biomarkers, visual ranges, clinical insights, and generate customized nutritional action plans.</p>
+        <div class="empty-actions">
+          <button class="btn btn-primary" onclick="document.querySelector('[data-report-type=\'cbc\']').click()">
+            <i data-lucide="play"></i> Load Complete Blood Count Demo
+          </button>
+          <button class="btn btn-secondary" onclick="document.querySelector('[data-report-type=\'lipid\']').click()">
+            Load Lipid Panel Demo
+          </button>
+        </div>
+      </div>
+
+      <!-- Dashboard Grid (Populated dynamically) -->
+      <div class="results-dashboard hidden" id="resultsDashboard">
+        
+        <!-- Report Meta Header -->
+        <div class="report-meta-header">
+          <div>
+            <span class="category-tag" id="reportCategory">Category: Lipid Panel</span>
+            <h2 id="reportTitle">Comprehensive Lipid Profile</h2>
+            <p class="report-date-notes">
+              <i data-lucide="calendar"></i> Report Date: <span id="reportDate">2026-06-20</span> 
+              <span class="meta-separator">|</span> 
+              <i data-lucide="clipboard"></i> Clinician Notes: <span id="reportNotes">Follow-up risk assessment</span>
+            </p>
+          </div>
+          <div class="report-meta-actions">
+            <button class="btn btn-secondary btn-sm" id="printReportBtn">
+              <i data-lucide="printer"></i> Print Report
+            </button>
+            <button class="btn btn-outline btn-sm text-red" id="clearReportBtn">
+              <i data-lucide="trash-2"></i> Clear
+            </button>
+          </div>
+        </div>
+
+        <!-- Upper Row: Health Score & Diagnostic AI Summary -->
+        <div class="dashboard-top-row">
+          
+          <!-- Score Card -->
+          <div class="dashboard-card health-score-card">
+            <h3>Metabolic Health Index</h3>
+            <div class="radial-gauge-wrapper">
+              <div class="radial-gauge">
+                <svg viewBox="0 0 100 100" class="gauge-svg">
+                  <circle cx="50" cy="50" r="44" class="gauge-bg"></circle>
+                  <circle cx="50" cy="50" r="44" class="gauge-fill" id="gaugeFill" stroke-dasharray="276.4" stroke-dashoffset="82.9"></circle>
+                </svg>
+                <div class="gauge-content">
+                  <span class="gauge-number" id="gaugeNumber">85</span>
+                  <span class="gauge-label">Score</span>
+                </div>
+              </div>
+            </div>
+            <div class="score-evaluation text-center">
+              <span class="status-badge badge-success" id="scoreBadge">Optimal Status</span>
+              <p class="score-desc" id="scoreDescription">Your biomarkers suggest stable metabolic activity with minor nutritional room for optimization.</p>
+            </div>
+          </div>
+
+          <!-- Diagnostic Summary Card -->
+          <div class="dashboard-card summary-card">
+            <div class="card-header-with-badge">
+              <h3>AI Clinical Insight & Diagnostic</h3>
+              <span class="ai-pill"><i data-lucide="sparkles"></i> AI Engine</span>
+            </div>
+            <div class="clinical-narrative" id="clinicalNarrative">
+              <!-- Content generated dynamically -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Middle Section: Interactive Biomarker Metrics -->
+        <div class="dashboard-card biomarkers-card">
+          <div class="biomarkers-header">
+            <h3>Extracted Biomarkers & Physiological Indicators</h3>
+            <span class="panel-count-label" id="biomarkerCountLabel">4 Markers Loaded</span>
+          </div>
+          
+          <!-- Biomarker Grid -->
+          <div class="biomarkers-grid" id="biomarkersGrid">
+            <!-- Populated dynamically with biomarker cards -->
+          </div>
+        </div>
+
+        <!-- Bottom Row: Customized Nutrition & Action Checklist -->
+        <div class="dashboard-top-row">
+          <!-- Action Checklist Card -->
+          <div class="dashboard-card checklist-card">
+            <h3>Personalized Health Checklist</h3>
+            <p class="section-desc">Check off recommended actions to update your wellness compliance rating.</p>
+            <div class="checklist-container" id="checklistContainer">
+              <!-- Checked checklist items loaded dynamically -->
+            </div>
+          </div>
+
+          <!-- Dynamic Recommendations Card -->
+          <div class="dashboard-card recommendations-card">
+            <h3>Nutritional & Lifestyle Protocol</h3>
+            <div class="recommendations-container" id="recommendationsContainer">
+              <!-- Actions cards generated dynamically -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Right Panel: Cura AI Chatbot Assistant -->
+    <section class="chatbot-panel" id="chatbotPanel">
+      <div class="chat-header">
+        <div class="chat-avatar-wrapper">
+          <div class="chat-avatar">
+            <i data-lucide="sparkles" class="avatar-icon animate-pulse"></i>
+          </div>
+          <div>
+            <h3>Cura AI Companion</h3>
+            <span class="chat-status">Ready to discuss your report</span>
+          </div>
+        </div>
+        <button class="chat-reset-btn" id="resetChatBtn" title="Reset chat history">
+          <i data-lucide="rotate-ccw"></i>
+        </button>
+      </div>
+
+      <!-- Messages Output -->
+      <div class="chat-messages" id="chatMessages">
+        <div class="chat-bubble bot">
+          <div class="chat-message-content">
+            Hello! I am Cura AI. I have full context of any report you load in the dashboard. Ask me anything about specific biomarkers, what dietary adjustments can help, or standard physiological parameters.
+          </div>
+          <span class="chat-timestamp">System</span>
+        </div>
+      </div>
+
+      <!-- Quick prompts container -->
+      <div class="chat-quick-prompts" id="chatQuickPrompts">
+        <!-- Rendered dynamically depending on loaded report -->
+      </div>
+
+      <!-- Chat Input Area -->
+      <div class="chat-input-area">
+        <input type="text" id="chatInput" placeholder="Ask Cura about your results..." autocomplete="off"/>
+        <button class="chat-send-btn" id="chatSendBtn">
+          <i data-lucide="send"></i>
+        </button>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Sliding Details Drawer (Biomarker Detailed Description) -->
+  <div class="detail-drawer-overlay" id="drawerOverlay"></div>
+  <div class="detail-drawer" id="detailDrawer">
+    <div class="drawer-header">
+      <h2 id="drawerBiomarkerName">Hemoglobin</h2>
+      <button class="drawer-close-btn" id="drawerCloseBtn">
+        <i data-lucide="x"></i>
+      </button>
+    </div>
+    
+    <div class="drawer-body">
+      <!-- Category Badge & Range Overview -->
+      <div class="drawer-meta-row">
+        <span class="category-tag" id="drawerCategory">Hematology</span>
+        <div class="drawer-value-display">
+          <span class="label">Current:</span>
+          <span class="value-highlight" id="drawerCurrentValue">11.2</span>
+          <span class="unit" id="drawerUnit">g/dL</span>
+        </div>
+      </div>
+
+      <!-- Slider visualization in drawer -->
+      <div class="drawer-slider-container">
+        <div class="visual-range-labels">
+          <span class="label-low">Low (<span id="drawerRangeMin">12.0</span>)</span>
+          <span class="label-normal">Normal Range</span>
+          <span class="label-high">High (<span id="drawerRangeMax">17.5</span>)</span>
+        </div>
+        <div class="visual-slider-bar">
+          <div class="slider-marker-low"></div>
+          <div class="slider-marker-high"></div>
+          <div class="slider-pointer" id="drawerSliderPointer" style="left: 20%;"></div>
+        </div>
+      </div>
+
+      <!-- Description Block -->
+      <div class="drawer-section">
+        <h3>Biomarker Description</h3>
+        <p id="drawerDescription">Carries oxygen from your lungs to the rest of your body.</p>
+      </div>
+
+      <!-- Critical Analysis Block (High/Low) -->
+      <div class="drawer-section warning-block" id="drawerWarningBlock">
+        <h3 id="drawerWarningTitle">Clinical Indicator</h3>
+        <div class="warning-details">
+          <p><strong>Common Causes:</strong> <span id="drawerCauses">Iron deficiency...</span></p>
+          <p><strong>Typical Symptoms:</strong> <span id="drawerSymptoms">Fatigue...</span></p>
+        </div>
+      </div>
+
+      <!-- Actionable Diet & Lifestyle Protocol -->
+      <div class="drawer-section protocol-block">
+        <h3>Targeted Dietary Adjustments</h3>
+        <p id="drawerDietProtocol">Increase spinach, red meats, vitamin C...</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Document Scanning & OCR Simulation Overlay -->
+  <div class="scanning-overlay hidden" id="scanningOverlay">
+    <div class="scanning-modal">
+      <div class="scanning-graphic-box">
+        <div class="laser-scanner"></div>
+        <div class="radar-ping"></div>
+        <div class="document-preview-box">
+          <div class="document-thumbnail" id="scanDocThumbnail">
+            <i data-lucide="file-text"></i>
+          </div>
+          <!-- Bounding Boxes spawned dynamically -->
+          <div class="scan-grid" id="scanGridOverlay"></div>
+        </div>
+      </div>
+
+      <div class="scanning-text-details">
+        <div class="spinner-ring"></div>
+        <h2>Analyzing Clinical Document</h2>
+        <p class="scan-status-text" id="scanStatusText">Initialising secure document stream...</p>
+        
+        <!-- Interactive Code/Log Stream Console -->
+        <div class="console-log-box" id="consoleLogBox">
+          <div class="log-line text-mute">[SECURE] Connected to client session...</div>
+        </div>
+
+        <div class="progress-bar-wrapper">
+          <div class="progress-bar-fill" id="scanProgressBar"></div>
+        </div>
+        <div class="progress-percentage" id="scanProgressPercentage">0%</div>
+      </div>
+    </div>
+  </div>
+
+  <script src="mockData.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
