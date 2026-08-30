@@ -1,0 +1,14 @@
+.git
+.github
+.env
+config/.htpasswd
+config/.jwt-secret
+config/ssl
+backups
+node_modules
+__pycache__
+*.pyc
+design-templates
+*.zip
+TODO.md
+*.md

@@ -7,6 +7,52 @@ A complete, containerized medical record scanning and analysis stack combining:
 - **searXNG**: Private medical literature search
 - **Nginx**: Reverse proxy with API gateway
 
+## Development Setup
+
+1. Install Docker Desktop and Docker Compose.
+2. Copy `.env.template` to `.env` and replace every development password.
+3. Start the stack with `docker compose up -d --build`.
+4. Check service state with `docker compose ps` and `curl http://localhost/health`.
+5. Run `bash scripts/test-stack.sh` for the gateway smoke test.
+
+The browser-only development server remains available with `npm start` on port
+3000. The Docker stack uses Nginx on port 80 and the Node proxy internally.
+
+## Production Security
+
+Generate development certificates with `bash scripts/generate-certificates.sh`
+and credentials with `bash scripts/setup-authentication.sh`. Start production
+with `docker compose -f docker-compose.yml -f docker-compose.production.yml up -d
+--build`. Replace the generated self-signed certificate with a certificate from
+your organization or ACME provider before exposing the service publicly.
+
+The production overlay requires `DB_USER`, `DB_PASSWORD`, and
+`DB_ROOT_PASSWORD` to be explicitly set. It does not publish Orthanc's direct
+ports; access goes through the authenticated Nginx `/orthanc/` route.
+
+Authentication for clinical APIs should be delegated to an identity-aware
+ingress or OAuth2/OIDC gateway. Do not enable public access to Orthanc or FHIR,
+and do not place secrets in the image, Kubernetes manifest, or source control.
+
+## Backups and Recovery
+
+Run `bash scripts/backup.sh` on a scheduled host and copy the resulting SQL and
+Orthanc archives to encrypted, access-controlled storage. Test restoration
+regularly in an isolated environment. Recovery requires restoring MySQL first,
+then the Orthanc volume, and finally restarting the application services.
+
+## Troubleshooting
+
+- `nginx` fails on startup: confirm production certificates and `.htpasswd`
+  exist, or use the default HTTP compose configuration.
+- FHIR is unavailable: inspect `docker compose logs mysql hapi-fhir`; HAPI waits
+  for a healthy MySQL database.
+- Orthanc returns `401`: use the configured Orthanc credentials and the direct
+  REST paths such as `/orthanc/system` and `/orthanc/patients`.
+- Search returns `502`: SearXNG may still be starting; inspect
+  `docker compose logs searxng cura-app`.
+- Never upload real patient records to development environments or test data.
+
 ## Architecture Overview
 
 ```
@@ -145,19 +191,19 @@ curl http://localhost/api/ocr/status
 Medical imaging server supporting DICOM standard.
 
 **Web UI:** http://localhost:8042  
-**REST API:** http://localhost:8042/api/
+**REST API:** http://localhost:8042/
 
 **Sample Operations:**
 ```bash
 # List patients
-curl -u orthanc:orthanc123 http://localhost:8042/api/patients
+curl -u orthanc:orthanc123 http://localhost:8042/patients
 
 # List studies
-curl -u orthanc:orthanc123 http://localhost:8042/api/studies
+curl -u orthanc:orthanc123 http://localhost:8042/studies
 
 # Upload DICOM file
 curl -u orthanc:orthanc123 --data-binary @sample.dcm \
-  http://localhost:8042/api/instances
+  http://localhost:8042/instances
 ```
 
 ### HAPI FHIR Server (Port 8080)

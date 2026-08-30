@@ -1,0 +1,19 @@
+groups:
+  - name: cura-availability
+    rules:
+      - alert: CuraAppDown
+        expr: up{job="cura-app"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: Cura application scrape is failing
+          description: Prometheus cannot scrape the Cura application metrics endpoint.
+      - alert: CuraAppReceivingNoRequests
+        expr: increase(cura_http_requests_total[15m]) == 0
+        for: 30m
+        labels:
+          severity: warning
+        annotations:
+          summary: Cura application has received no requests
+          description: The application has reported no HTTP requests for 30 minutes.

@@ -1,0 +1,15 @@
+services:
+  cura-app:
+    environment:
+      NODE_ENV: staging
+      SEARCH_RATE_LIMIT: 60
+      SEMANTIC_ENDPOINT: ${SEMANTIC_ENDPOINT:-}
+    ports:
+      - "3000:3000"
+
+  nginx:
+    ports:
+      - "8080:80"
+    volumes:
+      - ./config/nginx.development.conf:/etc/nginx/nginx.conf:ro
+      - ./:/usr/share/nginx/html:ro

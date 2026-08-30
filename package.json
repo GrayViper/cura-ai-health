@@ -2,11 +2,16 @@
   "name": "cura-ai-health",
   "version": "1.0.0",
   "description": "Cura AI Health - Clinical Diagnostic & Report Analysis Platform",
-  "main": "index.html",
+  "main": "server.js",
   "scripts": {
-    "dev": "npx http-server -p 3000"
+    "dev": "node server.js",
+    "start": "node server.js",
+    "test": "node --check app.js && node --check server.js && node --check services-integration.js"
   },
   "keywords": [],
   "author": "Cura AI",
-  "license": "ISC"
+  "license": "ISC",
+  "dependencies": {
+    "webpack": "^5.109.2"
+  }
 }

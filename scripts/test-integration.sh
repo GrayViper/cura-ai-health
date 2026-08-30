@@ -46,11 +46,11 @@ test_endpoint() {
     
     if [[ "$http_code" =~ ^(200|201|400)$ ]]; then
         echo -e "${GREEN}✓ (HTTP $http_code)${NC}"
-        ((tests_passed++))
+        tests_passed=$((tests_passed + 1))
         return 0
     else
         echo -e "${RED}✗ (HTTP $http_code)${NC}"
-        ((tests_failed++))
+        tests_failed=$((tests_failed + 1))
         return 1
     fi
 }
@@ -61,7 +61,7 @@ echo "================================"
 test_endpoint "Nginx Reverse Proxy" "$NGINX_URL/health"
 test_endpoint "OCR Service" "$OCR_URL/health"
 test_endpoint "FHIR Server" "$FHIR_URL/metadata"
-test_endpoint "Orthanc DICOM" "$ORTHANC_URL/" "GET" "orthanc:orthanc123"
+test_endpoint "Orthanc DICOM" "$ORTHANC_URL/system"
 test_endpoint "searXNG Search" "$SEARCH_URL/"
 
 echo ""
@@ -70,7 +70,7 @@ echo "================================"
 
 test_endpoint "OCR via Nginx" "$NGINX_URL/api/ocr/status"
 test_endpoint "FHIR via Nginx" "$NGINX_URL/fhir/metadata"
-test_endpoint "Orthanc via Nginx" "$NGINX_URL/orthanc/" "GET" "orthanc:orthanc123"
+test_endpoint "Orthanc via Nginx" "$NGINX_URL/orthanc/system"
 
 echo ""
 echo -e "${YELLOW}Step 3: OCR Service Integration${NC}"
@@ -136,7 +136,7 @@ else
 fi
 
 echo -ne "Patient List Endpoint... "
-patient_list=$(curl -s -u "orthanc:orthanc123" "$ORTHANC_URL/api/patients")
+patient_list=$(curl -s -u "orthanc:orthanc123" "$ORTHANC_URL/patients")
 if [[ "$patient_list" == *"["* ]]; then
     echo -e "${GREEN}✓${NC}"
     ((tests_passed++))

@@ -106,6 +106,14 @@ document.addEventListener('DOMContentLoaded', () => {
   const printReportBtn = document.getElementById('printReportBtn');
   const clearReportBtn = document.getElementById('clearReportBtn');
 
+  // Keep the service panel status visible without making services mandatory.
+  if (window.CuraServices?.ServiceHealth) {
+    window.CuraServices.ServiceHealth.checkAll().then(health => {
+      document.body.dataset.serviceHealth = health.overall;
+      console.info('Cura service health:', health);
+    });
+  }
+
   // Report fields
   const reportCategory = document.getElementById('reportCategory');
   const reportTitle = document.getElementById('reportTitle');

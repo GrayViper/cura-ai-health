@@ -21,7 +21,7 @@
   <!-- Cura Services Integration Module -->
   <script src="services-integration.js"></script>
   <!-- Stylesheets -->
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles.css?v=2">
 </head>
 <body>
 
@@ -211,6 +211,30 @@
             <i data-lucide="line-chart"></i>
             <p>Upload multiple reports over time to track physiological biomarker trends.</p>
           </div>
+        </div>
+      </div>
+      <div class="sidebar-card literature-section" id="literatureSearch">
+        <div class="card-header-row">
+          <h3>Medical Literature</h3>
+          <i data-lucide="book-open" aria-hidden="true"></i>
+        </div>
+        <p class="section-desc">Search public medical references. Results require clinician review.</p>
+        <form class="literature-form" id="literatureSearchForm">
+          <label class="sr-only" for="literatureQuery">Search medical literature</label>
+          <input id="literatureQuery" type="search" maxlength="240" placeholder="e.g. TSH reference range" required>
+          <button class="btn btn-primary btn-sm" type="submit" aria-label="Search medical literature">
+            <i data-lucide="search"></i>
+          </button>
+        </form>
+        <label class="semantic-toggle"><input type="checkbox" id="semanticSearchToggle"> Optional semantic summary</label>
+        <div class="source-filters" aria-label="Search sources">
+          <label><input type="checkbox" value="pubmed" checked> PubMed</label>
+          <label><input type="checkbox" value="nih" checked> NIH</label>
+          <label><input type="checkbox" value="who" checked> WHO</label>
+          <label><input type="checkbox" value="cdc" checked> CDC</label>
+        </div>
+        <div class="literature-results" id="literatureResults" aria-live="polite">
+          <span class="text-mute">No search performed.</span>
         </div>
       </div>
     </aside>

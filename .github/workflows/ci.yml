@@ -1,0 +1,36 @@
+name: Cura AI Health CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Validate JavaScript
+        run: npm test
+      - name: Validate Python syntax
+        run: python -m py_compile services/ocr/app.py
+      - name: Check patch formatting
+        run: git diff --check
+
+  compose:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Validate development Compose configuration
+        run: docker compose -f docker-compose.yml config --quiet
+      - name: Validate staging Compose configuration
+        run: docker compose -f docker-compose.yml -f docker-compose.staging.yml config --quiet
+      - name: Validate production Compose configuration
+        env:
+          GRAFANA_ADMIN_PASSWORD: ci-only-password
+        run: docker compose -f docker-compose.yml -f docker-compose.production.yml config --quiet

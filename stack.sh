@@ -13,6 +13,8 @@ NC='\033[0m' # No Color
 
 # Configuration
 COMPOSE_FILE="docker-compose.yml"
+PRODUCTION_COMPOSE_FILE="docker-compose.production.yml"
+STAGING_COMPOSE_FILE="docker-compose.staging.yml"
 ENV_FILE=".env"
 ENV_TEMPLATE=".env.template"
 
@@ -27,8 +29,8 @@ if ! command -v docker &> /dev/null; then
 fi
 
 # Check if Docker Compose is installed
-if ! command -v docker-compose &> /dev/null; then
-    echo -e "${RED}Error: Docker Compose is not installed${NC}"
+if ! docker compose version > /dev/null 2>&1; then
+    echo -e "${RED}Error: Docker Compose plugin is not installed${NC}"
     exit 1
 fi
 
@@ -43,7 +45,7 @@ fi
 case "${1:-help}" in
     start)
         echo -e "${YELLOW}Starting Cura AI Health stack...${NC}"
-        docker-compose -f "$COMPOSE_FILE" up -d
+        docker compose -f "$COMPOSE_FILE" up -d
         echo -e "${GREEN}Stack started!${NC}"
         echo ""
         echo -e "${GREEN}Services available at:${NC}"
@@ -53,46 +55,56 @@ case "${1:-help}" in
         echo "  - HAPI FHIR: http://localhost/fhir/"
         echo "  - searXNG Search: http://localhost:8888"
         echo ""
-        docker-compose -f "$COMPOSE_FILE" ps
+        docker compose -f "$COMPOSE_FILE" ps
+        ;;
+
+    staging)
+        echo -e "${YELLOW}Starting Cura staging stack on port 8080...${NC}"
+        docker compose -f "$COMPOSE_FILE" -f "$STAGING_COMPOSE_FILE" up -d --build
+        ;;
+
+    production)
+        echo -e "${YELLOW}Starting Cura production stack...${NC}"
+        docker compose -f "$COMPOSE_FILE" -f "$PRODUCTION_COMPOSE_FILE" up -d --build
         ;;
         
     stop)
         echo -e "${YELLOW}Stopping Cura AI Health stack...${NC}"
-        docker-compose -f "$COMPOSE_FILE" down
+        docker compose -f "$COMPOSE_FILE" down
         echo -e "${GREEN}Stack stopped!${NC}"
         ;;
         
     restart)
         echo -e "${YELLOW}Restarting Cura AI Health stack...${NC}"
-        docker-compose -f "$COMPOSE_FILE" restart
+        docker compose -f "$COMPOSE_FILE" restart
         echo -e "${GREEN}Stack restarted!${NC}"
         ;;
         
     status)
         echo -e "${YELLOW}Checking service status...${NC}"
-        docker-compose -f "$COMPOSE_FILE" ps
+        docker compose -f "$COMPOSE_FILE" ps
         ;;
         
     logs)
         SERVICE="${2:-}"
         if [ -z "$SERVICE" ]; then
-            docker-compose -f "$COMPOSE_FILE" logs -f
+            docker compose -f "$COMPOSE_FILE" logs -f
         else
-            docker-compose -f "$COMPOSE_FILE" logs -f "$SERVICE"
+            docker compose -f "$COMPOSE_FILE" logs -f "$SERVICE"
         fi
         ;;
         
     build)
         echo -e "${YELLOW}Building Docker images...${NC}"
-        docker-compose -f "$COMPOSE_FILE" build
+        docker compose -f "$COMPOSE_FILE" build
         echo -e "${GREEN}Build complete!${NC}"
         ;;
         
     rebuild)
         echo -e "${YELLOW}Rebuilding and restarting stack...${NC}"
-        docker-compose -f "$COMPOSE_FILE" down
-        docker-compose -f "$COMPOSE_FILE" build --no-cache
-        docker-compose -f "$COMPOSE_FILE" up -d
+        docker compose -f "$COMPOSE_FILE" down
+        docker compose -f "$COMPOSE_FILE" build --no-cache
+        docker compose -f "$COMPOSE_FILE" up -d
         echo -e "${GREEN}Rebuild complete!${NC}"
         ;;
         
@@ -110,7 +122,7 @@ case "${1:-help}" in
         
         # Orthanc
         echo -e "${YELLOW}Testing Orthanc DICOM...${NC}"
-        if curl -s http://localhost:8042/ > /dev/null; then
+        if curl -s -u "${ORTHANC_USER:-orthanc}:${ORTHANC_PASSWORD:-orthanc123}" http://localhost:8042/ > /dev/null; then
             echo -e "${GREEN}✓ Orthanc: Healthy${NC}"
         else
             echo -e "${RED}✗ Orthanc: Not responding${NC}"
@@ -149,7 +161,7 @@ case "${1:-help}" in
         read -p "Are you sure? (y/N): " -n 1 -r
         echo
         if [[ $REPLY =~ ^[Yy]$ ]]; then
-            docker-compose -f "$COMPOSE_FILE" down -v
+            docker compose -f "$COMPOSE_FILE" down -v
             echo -e "${GREEN}Cleanup complete!${NC}"
         else
             echo "Cleanup cancelled"

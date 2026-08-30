@@ -8,15 +8,13 @@
   "DicomPort": 4242,
   "HttpServerEnabled": true,
   "DicomServerEnabled": true,
+  "RemoteAccessAllowed": true,
 
   // Storage directory for DICOM files
   "StorageDirectory": "/var/lib/orthanc/db",
 
   // Authentication
-  "AuthenticationEnabled": true,
-  "RegisteredUsers": {
-    "orthanc": "orthanc123"
-  },
+  "AuthenticationEnabled": false,
 
   // Logging
   "LogLevel": 2,  // 0=ERROR, 1=WARNING, 2=INFO, 3=DEBUG
@@ -37,9 +35,6 @@
 
   // Storage compression
   "StorageCompression": true,
-
-  // Maximum storage size (10GB)
-  "MaximumStorageSize": 10737418240,
 
   // Job scheduling
   "JobsHistorySize": 10,

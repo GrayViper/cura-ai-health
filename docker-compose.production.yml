@@ -1,0 +1,52 @@
+services:
+  nginx:
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./config/nginx.production.conf:/etc/nginx/nginx.conf:ro
+      - ./config/ssl:/etc/nginx/ssl:ro
+      - ./config/.htpasswd:/etc/nginx/.htpasswd:ro
+      - ./:/usr/share/nginx/html:ro
+    depends_on:
+      cura-app:
+        condition: service_healthy
+
+  orthanc:
+    ports: []
+
+  mysql:
+    environment:
+      MYSQL_USER: ${DB_USER:?Set DB_USER for production}
+      MYSQL_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD for production}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?Set DB_ROOT_PASSWORD for production}
+
+  prometheus:
+    image: prom/prometheus:v3.5.0
+    container_name: cura-prometheus
+    volumes:
+      - ./config/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./config/prometheus-rules.yml:/etc/prometheus/rules.yml:ro
+      - prometheus-storage:/prometheus
+    networks:
+      - cura-network
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:12.1.0
+    container_name: cura-grafana
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?Set GRAFANA_ADMIN_PASSWORD}
+    volumes:
+      - grafana-storage:/var/lib/grafana
+      - ./config/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./config/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    networks:
+      - cura-network
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
+volumes:
+  prometheus-storage:
+  grafana-storage:

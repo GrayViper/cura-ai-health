@@ -1,6 +1,12 @@
 # searXNG Settings Configuration
 # Full documentation: https://docs.searxng.org/admin/settings/index.html
 
+doi_resolvers:
+  oadoi.org: https://oadoi.org/
+  doi.org: https://doi.org/
+
+default_doi_resolver: oadoi.org
+
 server:
   # Host to bind to
   host: 0.0.0.0
@@ -61,30 +67,37 @@ search:
 # Disable social media and focus on academic/medical sources
 engines:
   - name: google
+    engine: google
     enabled: true
     shortcut: g
     
   - name: bing
+    engine: bing
     enabled: true
     shortcut: b
     
   - name: wikipedia
+    engine: wikipedia
     enabled: true
     shortcut: w
     
   - name: pubmed
+    engine: pubmed
     enabled: true
     shortcut: pm
     
   - name: arxiv
+    engine: arxiv
     enabled: true
     shortcut: ax
     
   - name: duckduckgo
+    engine: duckduckgo
     enabled: true
     shortcut: ddg
     
   - name: google scholar
+    engine: google_scholar
     enabled: true
     shortcut: scholar
 

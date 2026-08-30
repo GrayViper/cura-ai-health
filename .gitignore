@@ -1,0 +1,11 @@
+# Local secrets and generated deployment material
+.env
+config/.htpasswd
+config/.jwt-secret
+config/ssl/
+backups/
+
+# Dependencies and local tooling
+node_modules/
+__pycache__/
+*.pyc

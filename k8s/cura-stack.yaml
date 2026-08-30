@@ -1,0 +1,282 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: cura-health
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: cura-secrets
+  namespace: cura-health
+type: Opaque
+stringData:
+  ORTHANC_PASSWORD: replace-me
+  DB_PASSWORD: replace-me
+  DB_ROOT_PASSWORD: replace-me
+  DB_USER: hapi_user
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cura-app
+  namespace: cura-health
+spec:
+  replicas: 2
+  selector:
+    matchLabels: { app: cura-app }
+  template:
+    metadata:
+      labels: { app: cura-app }
+    spec:
+      containers:
+        - name: app
+          image: cura-ai-health:latest
+          ports: [{ containerPort: 3000 }]
+          env:
+            - name: SEARXNG_URL
+              value: http://searxng:8080/search
+          readinessProbe:
+            httpGet: { path: /health, port: 3000 }
+          livenessProbe:
+            httpGet: { path: /health, port: 3000 }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cura-app
+  namespace: cura-health
+spec:
+  selector: { app: cura-app }
+  ports: [{ port: 3000, targetPort: 3000 }]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ocr-service
+  namespace: cura-health
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: ocr-service }
+  template:
+    metadata:
+      labels: { app: ocr-service }
+    spec:
+      containers:
+        - name: ocr
+          image: cura-ai-health-ocr:latest
+          ports: [{ containerPort: 5000 }]
+          readinessProbe:
+            httpGet: { path: /health, port: 5000 }
+          livenessProbe:
+            httpGet: { path: /health, port: 5000 }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ocr-service
+  namespace: cura-health
+spec:
+  selector: { app: ocr-service }
+  ports: [{ port: 5000, targetPort: 5000 }]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: searxng
+  namespace: cura-health
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: searxng }
+  template:
+    metadata:
+      labels: { app: searxng }
+    spec:
+      containers:
+        - name: searxng
+          image: searxng/searxng:latest
+          ports: [{ containerPort: 8080 }]
+          readinessProbe:
+            httpGet: { path: /, port: 8080 }
+          livenessProbe:
+            httpGet: { path: /, port: 8080 }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: searxng
+  namespace: cura-health
+spec:
+  selector: { app: searxng }
+  ports: [{ port: 8080, targetPort: 8080 }]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mysql
+  namespace: cura-health
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: mysql }
+  template:
+    metadata:
+      labels: { app: mysql }
+    spec:
+      containers:
+        - name: mysql
+          image: mysql:8.0
+          ports: [{ containerPort: 3306 }]
+          env:
+            - name: MYSQL_DATABASE
+              value: hapi_fhir
+            - name: MYSQL_USER
+              valueFrom: { secretKeyRef: { name: cura-secrets, key: DB_USER } }
+            - name: MYSQL_PASSWORD
+              valueFrom: { secretKeyRef: { name: cura-secrets, key: DB_PASSWORD } }
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom: { secretKeyRef: { name: cura-secrets, key: DB_ROOT_PASSWORD } }
+          readinessProbe:
+            tcpSocket: { port: 3306 }
+          volumeMounts:
+            - { name: storage, mountPath: /var/lib/mysql }
+      volumes:
+        - name: storage
+          persistentVolumeClaim: { claimName: mysql-storage }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql
+  namespace: cura-health
+spec:
+  selector: { app: mysql }
+  ports: [{ port: 3306, targetPort: 3306 }]
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mysql-storage
+  namespace: cura-health
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests: { storage: 20Gi }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hapi-fhir
+  namespace: cura-health
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: hapi-fhir }
+  template:
+    metadata:
+      labels: { app: hapi-fhir }
+    spec:
+      containers:
+        - name: hapi-fhir
+          image: hapiproject/hapi:latest
+          ports: [{ containerPort: 8080 }]
+          readinessProbe:
+            tcpSocket: { port: 8080 }
+          livenessProbe:
+            tcpSocket: { port: 8080 }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: hapi-fhir
+  namespace: cura-health
+spec:
+  selector: { app: hapi-fhir }
+  ports: [{ port: 8080, targetPort: 8080 }]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: orthanc
+  namespace: cura-health
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: orthanc }
+  template:
+    metadata:
+      labels: { app: orthanc }
+    spec:
+      containers:
+        - name: orthanc
+          image: jodogne/orthanc:latest
+          ports:
+            - { name: http, containerPort: 8042 }
+            - { name: dicom, containerPort: 4242 }
+          env:
+            - name: ORTHANC_PASSWORD
+              valueFrom: { secretKeyRef: { name: cura-secrets, key: ORTHANC_PASSWORD } }
+          volumeMounts: [{ name: storage, mountPath: /var/lib/orthanc/db }]
+          readinessProbe:
+            tcpSocket: { port: http }
+      volumes:
+        - name: storage
+          persistentVolumeClaim: { claimName: orthanc-storage }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: orthanc
+  namespace: cura-health
+spec:
+  selector: { app: orthanc }
+  ports:
+    - { name: http, port: 8042, targetPort: http }
+    - { name: dicom, port: 4242, targetPort: dicom }
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: orthanc-storage
+  namespace: cura-health
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests: { storage: 20Gi }
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: cura-ingress
+  namespace: cura-health
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: 50m
+spec:
+  tls:
+    - hosts: [cura.example.com]
+      secretName: cura-tls
+  rules:
+    - host: cura.example.com
+      http:
+        paths:
+          - path: /api/ocr
+            pathType: Prefix
+            backend:
+              service: { name: ocr-service, port: { number: 5000 } }
+          - path: /fhir
+            pathType: Prefix
+            backend:
+              service: { name: hapi-fhir, port: { number: 8080 } }
+          - path: /orthanc
+            pathType: Prefix
+            backend:
+              service: { name: orthanc, port: { number: 8042 } }
+          - path: /search
+            pathType: Prefix
+            backend:
+              service: { name: searxng, port: { number: 8080 } }
+          - path: /
+            pathType: Prefix
+            backend:
+              service: { name: cura-app, port: { number: 3000 } }

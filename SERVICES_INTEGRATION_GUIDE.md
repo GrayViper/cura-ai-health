@@ -240,10 +240,12 @@ function addServiceIntegrationPanel() {
   return panel;
 }
 
-// Handle search
+// Handle search through the same-origin privacy proxy
 async function performMedicalSearch(query) {
-  const results = await CuraServices.MedicalSearch.search(query);
-  displaySearchResults(results);
+  const response = await CuraServices.MedicalSearch.search(query, {
+    sources: 'pubmed,nih,who,cdc'
+  });
+  displaySearchResults(response.results || []);
 }
 
 // Display results

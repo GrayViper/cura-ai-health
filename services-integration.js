@@ -226,7 +226,7 @@ const DicomService = {
    */
   async getPatients() {
     try {
-      const response = await fetch(`${this.baseURL}/api/patients`);
+      const response = await fetch(`${this.baseURL}/patients`);
       if (!response.ok) {
         throw new Error(`Patient list failed: HTTP ${response.status}`);
       }
@@ -244,7 +244,7 @@ const DicomService = {
    */
   async getPatientStudies(patientId) {
     try {
-      const response = await fetch(`${this.baseURL}/api/patients/${patientId}`);
+      const response = await fetch(`${this.baseURL}/patients/${encodeURIComponent(patientId)}`);
       if (!response.ok) {
         throw new Error(`Studies retrieval failed: HTTP ${response.status}`);
       }
@@ -263,7 +263,7 @@ const DicomService = {
    */
   async getStudy(studyId) {
     try {
-      const response = await fetch(`${this.baseURL}/api/studies/${studyId}`);
+      const response = await fetch(`${this.baseURL}/studies/${encodeURIComponent(studyId)}`);
       if (!response.ok) {
         throw new Error(`Study retrieval failed: HTTP ${response.status}`);
       }
@@ -284,7 +284,7 @@ const DicomService = {
       const formData = new FormData();
       formData.append('file', file);
       
-      const response = await fetch(`${this.baseURL}/api/instances`, {
+      const response = await fetch(`${this.baseURL}/instances`, {
         method: 'POST',
         body: formData
       });
@@ -306,7 +306,7 @@ const DicomService = {
    */
   async getStatus() {
     try {
-      const response = await fetch(`${this.baseURL}/api/system`);
+      const response = await fetch(`${this.baseURL}/system`);
       return await response.json();
     } catch (error) {
       console.error('DICOM status check failed:', error);
@@ -320,7 +320,7 @@ const DicomService = {
 // ============================================================================
 
 const MedicalSearch = {
-  baseURL: '/search/api',
+  baseURL: '/api/search',
   
   /**
    * Search medical literature and resources
@@ -332,20 +332,18 @@ const MedicalSearch = {
     try {
       const params = new URLSearchParams({
         q: query,
-        format: 'json',
         ...options
       });
       
-      const response = await fetch(`${this.baseURL}/search?${params}`);
+      const response = await fetch(`${this.baseURL}?${params}`);
       if (!response.ok) {
         throw new Error(`Search failed: HTTP ${response.status}`);
       }
       
-      const data = await response.json();
-      return data.results || [];
+      return await response.json();
     } catch (error) {
       console.error('Search error:', error);
-      return [];
+      return { results: [], error: error.message };
     }
   },
   
@@ -357,7 +355,7 @@ const MedicalSearch = {
    */
   async searchByEngines(query, engines = ['pubmed', 'scholar']) {
     return this.search(query, {
-      engines: engines.join(',')
+      sources: engines.join(',')
     });
   },
   
@@ -375,8 +373,8 @@ const MedicalSearch = {
     
     const results = [];
     for (const query of queries) {
-      const res = await this.search(query, { engines: 'pubmed,scholar' });
-      results.push(...res);
+      const res = await this.search(query, { sources: 'pubmed,nih,who,cdc' });
+      results.push(...(res.results || []));
     }
     
     return results.slice(0, 10); // Return top 10 results
@@ -389,8 +387,22 @@ const MedicalSearch = {
    */
   async searchCondition(condition) {
     return this.search(`${condition} clinical management diagnosis treatment`, {
-      engines: 'pubmed,scholar,wikipedia'
+      sources: 'pubmed,nih,who,cdc'
     });
+  }
+};
+
+const SemanticSearch = {
+  async search(query) {
+    try {
+      const response = await fetch(`/api/semantic-search?q=${encodeURIComponent(query)}`);
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || `Semantic search failed: HTTP ${response.status}`);
+      return data;
+    } catch (error) {
+      console.error('Semantic search error:', error);
+      return { error: error.message };
+    }
   }
 };
 
@@ -529,6 +541,49 @@ const ServiceHealth = {
   }
 };
 
+function initializeLiteratureSearch() {
+  const form = document.getElementById('literatureSearchForm');
+  const queryInput = document.getElementById('literatureQuery');
+  const resultsContainer = document.getElementById('literatureResults');
+  if (!form || !queryInput || !resultsContainer) return;
+
+  form.addEventListener('submit', async event => {
+    event.preventDefault();
+    const sources = Array.from(form.parentElement.querySelectorAll('.source-filters input:checked'))
+      .map(input => input.value);
+    resultsContainer.textContent = 'Searching public references...';
+    const searchResponse = await MedicalSearch.search(queryInput.value, { sources: sources.join(',') });
+    resultsContainer.textContent = '';
+    if (searchResponse.error || !searchResponse.results?.length) {
+      resultsContainer.textContent = searchResponse.error || 'No matching references were found.';
+      return;
+    }
+    searchResponse.results.forEach(result => {
+      const article = document.createElement('article');
+      article.className = 'literature-result';
+      article.innerHTML = '<a target="_blank" rel="noopener noreferrer"></a><p></p><small></small>';
+      article.querySelector('a').href = result.url;
+      article.querySelector('a').textContent = result.title;
+      article.querySelector('p').textContent = result.content;
+      article.querySelector('small').textContent = result.engine;
+      resultsContainer.appendChild(article);
+    });
+    if (document.getElementById('semanticSearchToggle').checked) {
+      const semanticResponse = await SemanticSearch.search(queryInput.value);
+      if (!semanticResponse.error && semanticResponse.summary) {
+        const summary = document.createElement('p');
+        summary.className = 'semantic-summary';
+        summary.textContent = `Summary for clinician review: ${semanticResponse.summary}`;
+        resultsContainer.prepend(summary);
+      }
+    }
+  });
+}
+
+if (typeof document !== 'undefined') {
+  document.addEventListener('DOMContentLoaded', initializeLiteratureSearch);
+}
+
 // ============================================================================
 // EXPORTS - Make available globally for integration
 // ============================================================================
@@ -540,6 +595,7 @@ if (typeof window !== 'undefined') {
     FHIRService,
     DicomService,
     MedicalSearch,
+    SemanticSearch,
     MedicalWorkflow,
     ServiceHealth
   };
@@ -552,6 +608,7 @@ if (typeof module !== 'undefined' && module.exports) {
     FHIRService,
     DicomService,
     MedicalSearch,
+    SemanticSearch,
     MedicalWorkflow,
     ServiceHealth
   };
