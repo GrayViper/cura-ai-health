@@ -32,5 +32,8 @@ jobs:
         run: docker compose -f docker-compose.yml -f docker-compose.staging.yml config --quiet
       - name: Validate production Compose configuration
         env:
+          DB_USER: hapi_user
+          DB_PASSWORD: ci-only-password
+          DB_ROOT_PASSWORD: ci-root-password
           GRAFANA_ADMIN_PASSWORD: ci-only-password
         run: docker compose -f docker-compose.yml -f docker-compose.production.yml config --quiet
