@@ -1,5 +1,8 @@
 # Cura AI Health
 
+#Demo
+Check live demo at : https://grayviper.github.io/cura-ai-health/
+
 Self-hosted clinical report analysis with browser-based parsing, OCR, Orthanc
 DICOM storage, HAPI FHIR, and privacy-focused medical literature search.
 
