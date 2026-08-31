@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "Cura AI Health - Clinical Diagnostic & Report Analysis Platform",
   "main": "server.js",
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "scripts": {
     "dev": "node server.js",
     "start": "node server.js",

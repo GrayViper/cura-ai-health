@@ -1,0 +1,9 @@
+{
+  "version": 2,
+  "rewrites": [
+    { "source": "/api/search", "destination": "/api/search" },
+    { "source": "/api/semantic-search", "destination": "/api/semantic-search" },
+    { "source": "/health", "destination": "/api/health" },
+    { "source": "/metrics", "destination": "/api/metrics" }
+  ]
+}
